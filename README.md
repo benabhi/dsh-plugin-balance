@@ -10,8 +10,9 @@ Plugin para [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 
 El importe sale del mismo dato que ves en <https://platform.deepseek.com/usage>: el plugin pide al Host el balance del wallet de la cuenta con la que ya iniciaste sesión en Harness. No hace falta API key y el token de la cuenta nunca llega al navegador.
 
 - Se actualiza **cada 60 s**, y también al volver el foco a la ventana o al abrir una sesión nueva.
+- **Es un link**: al hacer click abre la página de *usage* de la plataforma en una pestaña nueva (usa la URL que provee el Host, `platformOrigin` + `/usage`, con fallback a `https://platform.deepseek.com/usage`). Click del medio y Ctrl+click también funcionan.
 - Sin sesión de DeepSeek iniciada no muestra nada (se oculta en lugar de inventar un cero).
-- El tooltip muestra el desglose: saldo total, saldo recargado y saldo bonificado.
+- El tooltip muestra el desglose: saldo total, saldo recargado y saldo bonificado, más la acción de abrir usage.
 - Si la lectura falla, conserva el último importe conocido.
 
 ### Detalles de formato
@@ -59,7 +60,7 @@ Para desinstalarlo: quitá la entrada de `dsh.profile.bundles`, borrá el enlace
 | Archivo | Rol |
 |---|---|
 | `index.js` | Mitad Host: `apply()` vacío; el bundle del navegador hace todo el trabajo. |
-| `client.js` | Módulo del navegador: registra el pill en el slot `conversation.composer.dock` (orden 2, después de `activity` y `usage`) y consulta `ctx.remote.account.getBalance(...)`. |
+| `client.js` | Módulo del navegador: registra el pill-link en el slot `conversation.composer.dock` (orden 2, después de `activity` y `usage`), consulta `ctx.remote.account.getBalance(...)` y toma la URL de usage de `ctx.remote.account.getState()`. |
 | `cordis.patch.yml` | Fila del plugin que inserta el bundle en el perfil. |
 | `locale/{en,zh}.json` | Título y descripción para el gestor de plugins. |
 | `icon.svg` | Icono del bundle (wallet). |

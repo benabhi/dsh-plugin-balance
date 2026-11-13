@@ -8,6 +8,8 @@ window.__ModuleLoader__.load({
     const NS = 'deepseek-balance';
     /** Refresh cadence for the wallet read. */
     const REFRESH_MS = 60000;
+    /** Destination used until the Host reports its own Platform usage URL. */
+    const DEFAULT_USAGE_URL = 'https://platform.deepseek.com/usage';
     /** Style element identity, matched by the disposal path. */
     const CSS_TAG_ID = 'dsh-plugin-balance/ComposerBalance.module.css';
 
@@ -17,6 +19,7 @@ window.__ModuleLoader__.load({
       'pill.topUp': 'Top-up credit',
       'pill.bonus': 'Bonus credit',
       'pill.aria': 'DeepSeek balance',
+      'pill.openUsage': 'Open usage',
     };
 
     const zh = {
@@ -25,6 +28,7 @@ window.__ModuleLoader__.load({
       'pill.topUp': '充值余额',
       'pill.bonus': '赠送余额',
       'pill.aria': 'DeepSeek 余额',
+      'pill.openUsage': '打开用量页面',
     };
 
     /** Composer-dock pill geometry copied from the sibling stat pills. */
@@ -37,6 +41,12 @@ window.__ModuleLoader__.load({
       'gap:6px;padding:1px 8px;display:inline-flex}',
       '.dsb-pill svg{flex:none;width:14px;height:14px}',
       '.dsb-label{text-overflow:ellipsis;min-width:0;overflow:hidden}',
+      'a.dsb-anchor{color:inherit;text-decoration:none;border-radius:var(--dsw-radius-sm)}',
+      'a.dsb-anchor .dsb-pill{cursor:pointer}',
+      'a.dsb-anchor:hover .dsb-pill,a.dsb-anchor:focus-visible .dsb-pill{',
+      'background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}',
+      'a.dsb-anchor:focus-visible{outline:var(--dsw-focus-ring-width) solid ',
+      'var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary));outline-offset:2px}',
     ].join('');
 
     /** Install the pill stylesheet once per page and return its removal. */
@@ -138,13 +148,28 @@ window.__ModuleLoader__.load({
 
     /**
      * One composer-dock pill with the account's remaining credit.
-     * @param props - `readBalance` from the plugin scope plus the slot's locale translator.
-     * @returns the pill, or null while there is no wallet to report.
+     * @param props - balance and usage-URL readers from the plugin scope, plus the slot's translator.
+     * @returns the pill link, or null while there is no wallet to report.
      */
     function BalancePill(props) {
       const readBalance = props.readBalance;
+      const readUsageUrl = props.readUsageUrl;
       const t = typeof props.t === 'function' ? props.t : (key) => key;
       const [state, setState] = React.useState({ phase: 'loading' });
+      const [usageUrl, setUsageUrl] = React.useState(DEFAULT_USAGE_URL);
+
+      React.useEffect(() => {
+        let alive = true;
+        Promise.resolve()
+          .then(() => readUsageUrl())
+          .then((url) => {
+            if (alive && typeof url === 'string' && url !== '') setUsageUrl(url);
+          })
+          .catch(() => {});
+        return () => {
+          alive = false;
+        };
+      }, [readUsageUrl]);
 
       React.useEffect(() => {
         let alive = true;
@@ -188,14 +213,24 @@ window.__ModuleLoader__.load({
         t('pill.available') + ': ' + total,
         t('pill.topUp') + ': ' + formatCents(summary.topUp) + ' ' + summary.currency,
         t('pill.bonus') + ': ' + formatCents(summary.bonus) + ' ' + summary.currency,
+        '',
+        t('pill.openUsage'),
       ].join('\n');
 
       return h(
-        'span',
-        { className: 'dsb-anchor', 'data-composer-stat': 'balance', title: tooltip },
+        'a',
+        {
+          className: 'dsb-anchor',
+          'data-composer-stat': 'balance',
+          href: usageUrl,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          title: tooltip,
+          'aria-label': t('pill.aria') + ': ' + total + '. ' + t('pill.openUsage'),
+        },
         h(
           'span',
-          { className: 'dsb-pill', 'aria-label': t('pill.aria') + ': ' + total },
+          { className: 'dsb-pill' },
           WalletIcon(),
           h('span', { className: 'dsb-label' }, total),
         ),
@@ -228,6 +263,21 @@ window.__ModuleLoader__.load({
           return account.getBalance(clientMetadata());
         };
 
+        /** Resolve the Platform usage destination the Host derives from its platform origin. */
+        const readUsageUrl = () => {
+          const account = ctx.remote !== void 0 && ctx.remote !== null ? ctx.remote.account : void 0;
+          if (account === void 0 || account === null || typeof account.getState !== 'function') {
+            return Promise.resolve(DEFAULT_USAGE_URL);
+          }
+          return account.getState().then(
+            (result) => {
+              const url = result !== null && result !== void 0 && result.ok === true && result.value !== null && typeof result.value === 'object' && result.value.links !== null && typeof result.value.links === 'object' ? result.value.links.usageUrl : void 0;
+              return typeof url === 'string' && /^https?:\/\/[^\s]+$/i.test(url) ? url : DEFAULT_USAGE_URL;
+            },
+            () => DEFAULT_USAGE_URL,
+          );
+        };
+
         ctx.slots.inject('conversation.composer.dock', () =>
           ctx.slots.register(
             {
@@ -235,7 +285,7 @@ window.__ModuleLoader__.load({
               id: 'deepseek-balance',
               order: 2,
               locale: NS,
-              inject: () => ({ readBalance }),
+              inject: () => ({ readBalance, readUsageUrl }),
             },
             BalancePill,
           ),

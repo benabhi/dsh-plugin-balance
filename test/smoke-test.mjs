@@ -69,6 +69,7 @@ const balanceValue = {
 };
 
 let calls = 0;
+const usageUrl = 'https://platform.example.test/usage?from=dsh';
 const ctx = {
   locale: {
     register: (ns, dicts) => { localeRegistrations.push({ ns, keys: Object.keys(dicts.en) }); return () => {}; },
@@ -76,6 +77,7 @@ const ctx = {
   remote: {
     account: {
       getBalance: async (metadata) => { calls += 1; globalThis.__lastMetadata = metadata; return { ok: true, value: balanceValue }; },
+      getState: async () => ({ ok: true, value: { status: 'credential-stored', links: { usageUrl, topUpUrl: 'https://platform.example.test/top-up' }, attempt: null } }),
     },
   },
   effect: (factory) => { factory(); },
@@ -127,6 +129,11 @@ if (registration.options.name !== 'conversation.composer.dock') problems.push('s
 if (registration.options.order !== 2) problems.push('order mismatch');
 if (text !== '2.06 USD') problems.push('amount text mismatch: ' + text);
 if (!String(second?.props?.title ?? '').includes('2.06 USD')) problems.push('tooltip missing total');
+if (second?.type !== 'a') problems.push('pill is not an anchor: ' + second?.type);
+if (second?.props?.href !== usageUrl) problems.push('href mismatch: ' + second?.props?.href);
+if (second?.props?.target !== '_blank') problems.push('target mismatch');
+if (!String(second?.props?.rel ?? '').includes('noopener')) problems.push('rel is missing noopener');
+if (!String(second?.props?.['aria-label'] ?? '').includes('EN:pill.openUsage')) problems.push('aria-label missing action');
 if (calls !== 1) problems.push('expected one read, got ' + calls);
 if (globalThis.__lastMetadata?.version !== '0.2.1-rc.5') problems.push('metadata version mismatch');
 if (globalThis.__lastMetadata?.locale !== 'es-AR') problems.push('metadata locale mismatch');
