@@ -1,0 +1,6 @@
+# Local analysis artifacts and installed dependencies
+.dsh-src/
+.dsh-tools/
+node_modules/
+*.log
+*.bak-*

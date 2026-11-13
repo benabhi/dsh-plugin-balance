@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DeepSeek Balance",
+    "description": "Shows the remaining DeepSeek credit beside tok/s, cache hit and context usage."
+  }
+}

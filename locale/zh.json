@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "DeepSeek 余额",
+    "description": "在 tok/s、缓存命中与上下文用量旁显示剩余 DeepSeek 额度。"
+  }
+}
